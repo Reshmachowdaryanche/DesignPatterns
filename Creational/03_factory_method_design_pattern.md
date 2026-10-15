@@ -3,7 +3,7 @@
 
 ## 1\. Definition
 
-The Factory Method Design Pattern is a **creational design pattern** in which a parent class defines a method for creating objects, and child classes decide which concrete object to create.
+The Factory Method Design Pattern is a **creational design pattern** in which a parent class(abstract creator) defines a method for creating objects, and child classes decide which concrete object to create.
 
 **Main goal:** Separate object creation from the business logic that uses the object.
 
