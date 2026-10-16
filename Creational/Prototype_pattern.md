@@ -2,97 +2,80 @@
 
 # Prototype Design Pattern — Java & Kotlin
 
-A practical guide to the Prototype Pattern, with real-world examples, Java and Kotlin implementations, object-cloning diagrams, shallow vs. deep copy, comparisons, and interview questions.
+An interview-focused guide to the Prototype Pattern, including practical examples, copying strategies, comparisons, and common interview questions.
 
 ## Table of Contents
 
 1. What Is the Prototype Pattern?
-2. The Problem Without Prototype
-3. Prototype Pattern in Java
-4. Prototype Pattern in Kotlin
+2. Why Do We Need It?
+3. Java Implementation
+4. Kotlin Implementation
 5. Shallow Copy vs. Deep Copy
 6. How Prototype Works
-7. Advantages and Limitations
-8. When to Use Prototype
-9. Prototype vs. Factory and Builder
-10. Common Interview Questions
-11. Quick Revision
+7. When to Use Prototype
+8. Prototype vs. Factory vs. Builder
+9. Common Interview Questions
+10. Quick Revision
 
 ---
 
 # 1\. What Is the Prototype Pattern?
 
-The **Prototype Pattern** is a creational design pattern that creates new objects by copying an existing object, called the _prototype_, rather than constructing every object from scratch.
+The **Prototype Pattern** is a creational design pattern that creates new objects by copying existing, configured objects instead of constructing each object from scratch.
 
-It is useful when:
+### Real-world example: Game characters
 
-- Object creation is expensive or complicated.
-- Many objects share similar initial configuration.
-- You need copies of an existing object with small changes.
-- The exact concrete class should not need to be known by the client.
+Imagine a game that needs hundreds of warrior enemies. Each warrior has the same initial health, attack power, weapon, and configuration.
 
-### Real-world example: Game character creation
-
-Imagine a game containing different enemy types:
-
-- Warrior
-- Archer
-- Wizard
-
-Each enemy has properties such as health, attack power, weapons, and movement speed.
-
-Creating and configuring every enemy from scratch can involve many setup steps. Instead, the game can maintain configured prototypes and clone them when new enemies are needed.
-
-For example:
+Instead of repeating the entire initialization process, create a configured warrior prototype and copy it whenever a new warrior is needed.
 
 ```
-Enemy enemy = warriorPrototype.copy();
-enemy.setHealth(150);
+Enemy warrior = warriorPrototype.copy();
 ```
 
-The game copies the existing warrior configuration and customizes the new instance.
+The copied enemy can then be customized independently, provided its copy implementation handles mutable state correctly.
 
 **Memory trick:** Prototype = Copy an existing object to create a new one.
 
 ---
 
-# 2\. The Problem Without Prototype
+# 2\. Why Do We Need It?
 
-Suppose a game creates hundreds of enemies with similar configurations.
-
-Without Prototype, every enemy might require repeated construction and setup:
+Suppose creating an enemy requires several initialization steps:
 
 ```
 Enemy enemy = new Enemy();
-enemy.setType("Warrior");
 enemy.setHealth(100);
 enemy.setAttackPower(20);
-enemy.setWeapon("Sword");
+enemy.setWeapon(new Weapon("Sword"));
 enemy.initializeAnimations();
+enemy.loadConfiguration();
 ```
 
-If this configuration is repeated frequently, it can lead to:
+Repeating this setup for hundreds of enemies creates duplicated initialization logic.
 
-- Duplicated initialization logic.
-- Repeated expensive setup.
-- Difficulty maintaining consistent default configurations.
-- More knowledge of concrete classes in client code.
-
-A Prototype-based design creates a configured template once and copies it whenever required.
+Instead, configure a prototype once:
 
 ```
-Enemy enemy = warriorPrototype.copy();
+Enemy warriorPrototype = createConfiguredWarrior();
 ```
 
-The copy can then be customized without changing the original prototype.
+Then create new enemies by copying it:
 
-**Important:** Cloning is not automatically faster than constructing a new object. The benefit depends on the cost of initialization, the copy implementation, and the object's internal structure.
+```
+Enemy enemy1 = warriorPrototype.copy();
+Enemy enemy2 = warriorPrototype.copy();
+```
+
+This approach is useful when objects share a common configuration or initialization is expensive.
+
+**Important:** Prototype does not automatically make object creation faster. Copying must be appropriate for the object's structure and lifecycle.
 
 ---
 
-# 3\. Prototype Pattern in Java
+# 3\. Java Implementation
 
-We'll create an `Enemy` prototype that can be copied and customized.
+We will create an `Enemy` prototype with a `copy()` method.
 
 ## Step 1: Define the Prototype Interface
 
@@ -102,23 +85,23 @@ interface Prototype<T> {
 }
 ```
 
-The interface defines the operation clients use to create a copy without depending on the concrete implementation.
+The interface provides a common operation for creating copies.
 
-## Step 2: Implement the Enemy Class
+## Step 2: Implement the Concrete Prototype
 
 ```
 class Enemy implements Prototype<Enemy> {
 
-    private String type;
+    private final String type;
     private int health;
-    private int attackPower;
-    private String weapon;
+    private final int attackPower;
+    private final Weapon weapon;
 
     public Enemy(
         String type,
         int health,
         int attackPower,
-        String weapon
+        Weapon weapon
     ) {
         this.type = type;
         this.health = health;
@@ -132,7 +115,7 @@ class Enemy implements Prototype<Enemy> {
             type,
             health,
             attackPower,
-            weapon
+            new Weapon(weapon.getName())
         );
     }
 
@@ -142,31 +125,30 @@ class Enemy implements Prototype<Enemy> {
 
     public void display() {
         System.out.println(
-            "Type: " + type
-            + ", Health: " + health
-            + ", Attack: " + attackPower
-            + ", Weapon: " + weapon
+            type + " | Health: " + health
+            + " | Attack: " + attackPower
+            + " | Weapon: " + weapon.getName()
         );
+    }
+}
+
+class Weapon {
+
+    private final String name;
+
+    public Weapon(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
     }
 }
 ```
 
-### Understanding `copy()`
+The `copy()` method creates a new `Enemy` and a new `Weapon`, so the copied enemy does not share that mutable object with the original.
 
-```
-@Override
-public Enemy copy() {
-    return new Enemy(type, health, attackPower, weapon);
-}
-```
-
-This method creates a new `Enemy` instance and copies the current field values.
-
-The new enemy is a separate object. Changing its health does not change the original enemy's health.
-
-This example uses a **manual copy constructor approach** rather than Java's built-in `Object.clone()` mechanism.
-
-## Step 3: Create and Copy a Prototype
+## Step 3: Use the Prototype
 
 ```
 public class Main {
@@ -174,7 +156,10 @@ public class Main {
     public static void main(String[] args) {
 
         Enemy warriorPrototype = new Enemy(
-            "Warrior", 100, 20, "Sword"
+            "Warrior",
+            100,
+            20,
+            new Weapon("Sword")
         );
 
         Enemy enemy1 = warriorPrototype.copy();
@@ -192,84 +177,36 @@ public class Main {
 Output:
 
 ```
-Type: Warrior, Health: 100, Attack: 20, Weapon: Sword
-Type: Warrior, Health: 150, Attack: 20, Weapon: Sword
-Type: Warrior, Health: 100, Attack: 20, Weapon: Sword
+Warrior | Health: 100 | Attack: 20 | Weapon: Sword
+Warrior | Health: 150 | Attack: 20 | Weapon: Sword
+Warrior | Health: 100 | Attack: 20 | Weapon: Sword
 ```
 
-### What does this demonstrate?
+### What happens?
 
-- `warriorPrototype` stores the original configuration.
-- `enemy1` and `enemy2` are independent copies.
-- Modifying `enemy1` does not affect the prototype or `enemy2`.
+- The prototype stores the original configuration.
+- `copy()` creates a new object with equivalent initial values.
+- `enemy1` and `enemy2` are separate instances.
+- Changing `enemy1`'s health does not change the other enemies.
 
-The client does not need to repeat the configuration or know how to initialize every field.
+The client does not need to repeat the construction logic.
 
 ---
 
-# 4\. Prototype Pattern in Kotlin
+# 4\. Kotlin Implementation
 
-Kotlin does not require a special cloning mechanism. You can define an explicit copy operation or use a data class when its generated copying behavior is sufficient.
+Kotlin data classes provide a convenient `copy()` method, which is useful for simple prototype-style creation.
 
-## Kotlin implementation using a regular class
-
-```
-interface Prototype<T> {
-    fun copy(): T
-}
-
-class Enemy(
-    private val type: String,
-    private var health: Int,
-    private val attackPower: Int,
-    private val weapon: String
-) : Prototype<Enemy> {
-
-    override fun copy(): Enemy =
-        Enemy(type, health, attackPower, weapon)
-
-    fun setHealth(health: Int) {
-        this.health = health
-    }
-
-    fun display() {
-        println(
-            "Type: $type, " +
-            "Health: $health, " +
-            "Attack: $attackPower, " +
-            "Weapon: $weapon"
-        )
-    }
-}
-
-fun main() {
-    val warriorPrototype = Enemy(
-        "Warrior", 100, 20, "Sword"
-    )
-
-    val enemy1 = warriorPrototype.copy()
-    val enemy2 = warriorPrototype.copy()
-
-    enemy1.setHealth(150)
-
-    warriorPrototype.display()
-    enemy1.display()
-    enemy2.display()
-}
-```
-
-The behavior is the same as the Java example: the `copy()` method explicitly creates a new instance with the prototype's current values.
-
-## Kotlin alternative: Data class
-
-For simple data objects, Kotlin's `data class` provides a generated `copy()` method.
+## Implementation
 
 ```
+data class Weapon(val name: String)
+
 data class Enemy(
     val type: String,
     val health: Int,
     val attackPower: Int,
-    val weapon: String
+    val weapon: Weapon
 )
 
 fun main() {
@@ -277,7 +214,7 @@ fun main() {
         type = "Warrior",
         health = 100,
         attackPower = 20,
-        weapon = "Sword"
+        weapon = Weapon("Sword")
     )
 
     val enemy1 = warriorPrototype.copy(health = 150)
@@ -289,58 +226,27 @@ fun main() {
 }
 ```
 
-Here:
+### Why is `copy()` useful here?
 
 ```
 val enemy1 = warriorPrototype.copy(health = 150)
 ```
 
-creates a new `Enemy` with the same values as the prototype, except for `health`.
+This creates a new `Enemy` with the same values as the prototype, except that its health is set to `150`.
 
-Kotlin's generated `copy()` method is convenient, but it performs a **shallow copy**. Nested mutable objects are not automatically duplicated.
+Kotlin's generated `copy()` method is shallow. In this example, `Weapon` is immutable, so sharing its reference is safe.
 
-**Note:** A Kotlin data class is not automatically the Prototype design pattern in every use case. Its `copy()` method simply provides a convenient copying mechanism that can implement the pattern when used for prototype-based creation.
+**Interview note:** A data class's `copy()` method can support prototype-style creation, but using a data class does not automatically mean the entire application implements the Prototype design pattern.
 
 ---
 
 # 5\. Shallow Copy vs. Deep Copy
 
-This is one of the most important Prototype interview topics.
+This is one of the most frequently asked Prototype-related interview questions.
 
-Suppose an object contains another mutable object.
-
-```
-class Weapon {
-    String name;
-
-    Weapon(String name) {
-        this.name = name;
-    }
-}
-```
-
-An enemy contains a reference to a `Weapon`:
-
-```
-class Enemy {
-    String type;
-    Weapon weapon;
-}
-```
-
-When copying an enemy, there are two possible approaches.
-
-## 5.1 Shallow Copy
+## Shallow Copy
 
 A shallow copy creates a new outer object but copies references to nested objects.
-
-```
-Enemy copy = new Enemy();
-copy.type = original.type;
-copy.weapon = original.weapon;
-```
-
-Object relationship:
 
 ```
 Original Enemy ──┐
@@ -348,266 +254,186 @@ Original Enemy ──┐
 Copied Enemy ────┘
 ```
 
-Both enemies refer to the same `Weapon` instance.
+If the weapon is mutable, changing it through one enemy can affect the other.
 
-Therefore:
+## Deep Copy
 
-```
-copy.weapon.name = "Bow";
-```
-
-also changes the weapon name observed through `original.weapon`.
-
-### When is shallow copy acceptable?
-
-- Nested objects are immutable.
-- Shared references are intentional.
-- The object contains only primitives, immutable values, or references that are safe to share.
-
-## 5.2 Deep Copy
-
-A deep copy duplicates the outer object and the relevant mutable nested objects.
+A deep copy creates a new outer object and duplicates the relevant nested mutable objects.
 
 ```
-Enemy copy = new Enemy();
-copy.type = original.type;
-copy.weapon = new Weapon(original.weapon.name);
+Original Enemy ───> Original Weapon
+
+Copied Enemy ─────> Copied Weapon
 ```
 
-Object relationship:
+Now, changes to one weapon do not affect the other.
 
-```
-Original Enemy ──> Original Weapon
-
-Copied Enemy ────> Copied Weapon
-```
-
-Now each enemy has its own weapon object.
-
-Changes to one weapon do not affect the other.
-
-### Important considerations
-
-Deep copying becomes more complicated when objects contain:
-
-- Nested collections.
-- Shared references that must remain shared within the copy.
-- Circular object references.
-- Resources such as files, sockets, or database connections.
-
-A correct deep-copy implementation must decide which objects should be duplicated and which should be shared or recreated.
-
-### Java's `Object.clone()`
-
-Java provides a protected `Object.clone()` method, traditionally used with `Cloneable`.
-
-However, `Object.clone()` performs a shallow field copy by default. Implementing `Cloneable` does not automatically provide a deep copy, and the API has design limitations.
-
-For many applications, an explicit copy constructor or `copy()` method is clearer and easier to maintain.
-
-### Kotlin's `data class.copy()`
-
-Kotlin's generated `copy()` method is also shallow.
+### Kotlin example
 
 ```
 data class Weapon(var name: String)
 
 data class Enemy(
-    val type: String,
+    val health: Int,
     val weapon: Weapon
 )
 
-val original = Enemy("Warrior", Weapon("Sword"))
-val copy = original.copy()
+val original = Enemy(100, Weapon("Sword"))
 
-copy.weapon.name = "Bow"
+// Shallow copy
+val shallowCopy = original.copy()
 
+shallowCopy.weapon.name = "Bow"
 println(original.weapon.name) // Bow
-```
 
-Both enemies reference the same mutable `Weapon`, so changing the copy's weapon also affects the original.
-
-To create a separate weapon:
-
-```
+// Deep copy
 val deepCopy = original.copy(
     weapon = original.weapon.copy()
 )
+
+deepCopy.weapon.name = "Axe"
+println(original.weapon.name) // Bow
 ```
 
-This works because `Weapon` is also a data class and its own `copy()` creates a new instance.
+The shallow copy shares the same `Weapon`. The deep copy creates a separate `Weapon`.
 
-**Memory trick:**
+### Important distinction
 
-- Shallow copy = New outer object, nested references may be shared.
-- Deep copy = Duplicate the relevant nested mutable objects too.
+- **Shallow vs. deep copy** describes how an object's contents are copied.
+- **Prototype** describes an object-creation approach that uses an existing object as a template.
+
+Both shallow and deep copying can be used in a Prototype implementation, depending on the required semantics.
 
 ---
 
 # 6\. How Prototype Works
 
-The general flow is:
-
 ```
 Client
   |
   v
-Choose an existing prototype
+Select configured prototype
   |
   v
 Call copy()
   |
   v
-Create a new object
+Create a new instance
   |
   v
-Customize the copy if needed
+Customize the copy
 ```
 
-For example:
+The pattern typically involves:
 
-```
-Enemy enemy = warriorPrototype.copy();
-enemy.setHealth(150);
-```
-
-Execution flow:
-
-1. The application prepares a configured prototype.
-2. The client requests a copy.
-3. The prototype creates a new object using its copying logic.
-4. The client optionally modifies the copy.
-5. The original prototype remains unchanged.
+1. Creating or configuring a prototype.
+2. Requesting a copy of that prototype.
+3. Returning a new object with the intended initial state.
+4. Optionally customizing the new object.
 
 ## Is a Prototype Registry required?
 
 No. A registry is optional.
 
-A registry can store named prototypes and return copies when requested.
+A registry stores prototypes so that clients can retrieve and copy them by name.
 
-For example, a game might register:
+For example:
 
-- `"warrior"` → warrior prototype
-- `"archer"` → archer prototype
-- `"wizard"` → wizard prototype
+```
+Enemy enemy = registry.get("warrior").copy();
+```
 
-The client asks the registry for a named prototype, and the registry returns a copy.
-
-This is useful when the application has many predefined configurations, but it adds another component and is unnecessary for simple cases.
+This is useful when many predefined prototypes are selected dynamically. For simple applications, a registry may be unnecessary.
 
 ---
 
-# 7\. Advantages and Limitations
-
-## Advantages
-
-- **Avoids repeated configuration:** Copy a configured object instead of setting every field again.
-- **Reduces dependence on concrete classes:** Clients can request copies through a common prototype interface.
-- **Supports runtime configuration:** Prototypes can be configured dynamically.
-- **Useful for repeated objects:** Common templates can be copied and customized.
-- **Can simplify expensive initialization:** Copying may be cheaper when construction involves costly setup.
-
-## Limitations
-
-- **Copying can be complicated:** Nested mutable objects require careful handling.
-- **Shallow copies can cause bugs:** Multiple objects may unintentionally share mutable state.
-- **Resource handling is difficult:** Files, connections, and other external resources should not necessarily be duplicated by copying.
-- **Copying may not be faster:** The performance benefit depends on the object and its construction process.
-- **Maintaining copy logic:** New fields must be included correctly in manual copy implementations.
-
----
-
-# 8\. When to Use Prototype
+# 7\. When to Use Prototype
 
 Use Prototype when:
 
-- Creating an object from scratch involves expensive setup.
+- Object initialization is expensive or complicated.
 - Many objects share a common initial configuration.
-- You need to create copies of runtime-configured objects.
-- The exact concrete type should be hidden from the client.
-- You want to create objects from templates that can be customized.
+- You need copies of objects configured at runtime.
+- Clients should create objects without knowing their concrete construction details.
+- Existing templates can be customized to produce new instances.
 
-### Common examples
+Common examples include game characters, document templates, graphical objects, configuration templates, and test fixtures.
 
-- Game enemies and character templates.
-- Preconfigured document templates.
-- Graphical objects with complex styles.
-- Configuration templates.
-- Test fixtures with a common starting state.
-
-Avoid Prototype when the object is inexpensive to construct and a simple constructor or factory is clearer.
+Avoid Prototype when a normal constructor or simple factory already provides a clear and efficient solution.
 
 ---
 
-# 9\. Prototype vs. Factory and Builder
+# 8\. Prototype vs. Factory vs. Builder
 
-| Feature | Prototype | Simple Factory | Factory Method | Builder |
-| --- | --- | --- | --- | --- |
-| Main purpose | Copy an existing object | Select a concrete object | Delegate creation to subclasses | Assemble an object step by step |
-| Creation mechanism | Copying | Conditional or lookup logic | Overridden creation method | Configuration methods and `build()` |
-| Starting point | Existing prototype | Type or creation request | Concrete creator | Builder configuration |
-| Typical use | Repeated configured objects | Small set of implementation choices | Extensible creation behavior | Objects with many options |
-| Main concern | Copy semantics | Which object to create | Which object a subclass creates | How to configure the object |
+| Feature | Prototype | Factory | Builder |
+| --- | --- | --- | --- |
+| Main purpose | Copy an existing object | Select or create an implementation | Configure an object step by step |
+| Creation mechanism | Copying | Factory method or selection logic | Configuration methods and `build()` |
+| Starting point | Existing configured object | Creation request or concrete creator | Builder configuration |
+| Typical use | Repeated objects based on templates | Selecting implementations | Objects with many optional parameters |
+| Main concern | Copying semantics | Which object to create | How to construct the object |
 
-### Key distinction
+### Easy way to remember
 
-- **Factory:** Creates an object by selecting or delegating to an implementation.
-- **Builder:** Creates an object by collecting and applying configuration.
-- **Prototype:** Creates an object by copying an existing instance.
+- **Factory:** Which object should be created?
+- **Builder:** How should the object be assembled?
+- **Prototype:** Can we create the new object by copying an existing one?
 
-These patterns can be combined. For example, a factory may retrieve a configured prototype and return a copy of it.
+These patterns can be combined. For example, a factory may select a prototype and return a copy of it.
 
 ---
 
-# 10\. Common Interview Questions
+# 9\. Common Interview Questions
 
 ### Q1. What is the Prototype Pattern?
 
-Prototype is a creational design pattern that creates new objects by copying existing instances instead of constructing each object from scratch.
+A creational design pattern that creates new objects by copying existing instances rather than constructing each object from scratch.
 
-### Q2. Why use Prototype instead of Factory?
+### Q2. Why do we need Prototype if shallow and deep copy already exist?
 
-A factory typically constructs an object based on a selection or creation rule. Prototype is useful when an existing, configured object is a convenient starting point for creating another object.
+Shallow and deep copy describe copying behavior. Prototype organizes object creation around copying configured instances. You do not need the pattern just because copying is possible; use it when copying is a useful creation strategy.
 
-A factory can also use prototypes internally, so the approaches are not mutually exclusive.
+### Q3. Does Prototype always improve performance?
 
-### Q3. What is the difference between shallow copy and deep copy?
+No. It can reduce repeated initialization, but copying may be just as expensive or more expensive than construction. Performance depends on the object and its copy implementation.
 
-A shallow copy creates a new outer object but can share references to nested objects. A deep copy duplicates the relevant nested mutable objects as well.
+### Q4. What is the difference between shallow copy and deep copy?
 
-### Q4. Is `Cloneable` enough to create a deep copy in Java?
+Shallow copy may share nested object references. Deep copy duplicates the relevant nested mutable objects as well.
 
-No. Java's `Object.clone()` copies fields shallowly by default. Nested mutable objects must be duplicated separately if deep-copy semantics are required.
+### Q5. Does Java's `Object.clone()` automatically perform a deep copy?
 
-### Q5. Does Kotlin's `data class.copy()` perform a deep copy?
+No. `Object.clone()` performs a shallow field copy by default. Nested objects must be copied separately if deep-copy behavior is required.
 
-No. It performs a shallow copy. Nested mutable objects remain shared unless they are explicitly copied.
+### Q6. Does Kotlin's data class `copy()` perform a deep copy?
 
-### Q6. Can Prototype improve performance?
-
-Sometimes. It can help when copying a configured object is cheaper than repeating expensive initialization. The actual benefit depends on the object and should be measured when performance matters.
+No. Kotlin's generated `copy()` is shallow. Nested mutable objects remain shared unless explicitly copied.
 
 ### Q7. Is a Prototype Registry mandatory?
 
-No. A registry is optional and is useful when many named prototypes must be managed and retrieved dynamically.
+No. It is an optional mechanism for storing and retrieving predefined prototypes.
 
-### Q8. Is Prototype always the best way to duplicate objects?
+### Q8. Can we use a copy constructor instead of Prototype?
 
-No. Use the simplest safe approach for the object. Constructors, copy constructors, explicit `copy()` methods, and data-class copying may all be appropriate depending on the requirements.
+Yes. A copy constructor or explicit copy method is often a simpler solution. The Prototype pattern becomes more useful when copying serves as a general, polymorphic object-creation mechanism.
+
+### Q9. What are the disadvantages of Prototype?
+
+Copying complex object graphs can be difficult, shallow copies may cause shared-state bugs, and copying resources such as database connections requires special handling.
 
 ---
 
-# 11\. Quick Revision
+# 10\. Quick Revision
 
-- **Purpose:** Create new objects by copying existing objects.
-- **Core concept:** Prototype → `copy()` → New object.
-- **Java:** Explicit copy methods or copy constructors are often clear alternatives to `Object.clone()`.
-- **Kotlin:** `data class.copy()` provides convenient shallow copying.
-- **Shallow copy:** Nested object references may be shared.
+- **Purpose:** Create objects by copying existing instances.
+- **Core operation:** `copy()`.
+- **Java:** Use an explicit copy method or copy constructor when appropriate.
+- **Kotlin:** `data class.copy()` is convenient for shallow copies.
+- **Shallow copy:** Nested references may be shared.
 - **Deep copy:** Relevant nested mutable objects are duplicated.
-- **Registry:** Optional collection of named prototypes.
-- **Main benefit:** Reuse an existing object's configuration.
-- **Main trade-off:** Correct copy behavior can be difficult for complex object graphs.
+- **Registry:** Optional collection of prototypes.
+- **Main benefit:** Reuse existing configuration.
+- **Main limitation:** Correct copying can be difficult for complex objects.
 
 ## One-Line Memory Trick
 
