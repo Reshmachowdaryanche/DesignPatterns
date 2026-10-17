@@ -25,11 +25,7 @@ Imagine you are traveling to another country. Your laptop charger has a plug tha
 
 Instead of changing the charger or the socket, you use a power adapter that allows the two incompatible interfaces to work together.
 
-中国旅行の持ち物リスト：完全パッキングガイド | WaysChina
 
-Go Travel Worldwide Converter Adapter Set Sale | Altman Luggage – Altman Luggage
-
-Mekury Innovations Travel Adapter International Plug Adapter, 4 Plug Types, Black, Travel Adapter International - Walmart.ca
 
 The same idea applies in software.
 
