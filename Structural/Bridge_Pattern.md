@@ -546,3 +546,307 @@ The abstraction and implementation can change independently without requiring ch
 ## One-Line Memory Trick
 
 Bridge = Connect two independent hierarchies through composition so each can change without changing the other.
+
+
+
+# Bridge Design Pattern — Remote Control Example (Java & Kotlin)
+
+The Bridge Pattern separates the remote control from the device it operates. This allows us to add new remote types and new devices independently.
+
+## 1. Real-world example
+
+Imagine you have two devices:
+
+- TV
+- Radio
+
+And two types of remotes:
+
+- Basic Remote
+- Advanced Remote
+
+Without Bridge, you might create `BasicTVRemote`, `BasicRadioRemote`, `AdvancedTVRemote`, and `AdvancedRadioRemote`.
+
+With Bridge, each remote works with any device that implements the common `Device` interface.
+
+Hand with remote control pointing at modern TV set
+
+Sangean PR-D18BK AM/FM/Clock Portable Digital Radio with Protective Bumper (Black/Gray)
+
+## 2. Java Implementation
+
+### Step 1: Create the Device interface
+
+This is the implementation interface that all devices must follow.
+
+java
+```
+interface Device {
+    void turnOn();
+    void turnOff();
+    void setVolume(int volume);
+}
+```
+
+### Step 2: Implement the devices
+
+TV.java
+
+java
+```
+class TV implements Device {
+
+    @Override
+    public void turnOn() {
+        System.out.println("TV is ON");
+    }
+
+    @Override
+    public void turnOff() {
+        System.out.println("TV is OFF");
+    }
+
+    @Override
+    public void setVolume(int volume) {
+        System.out.println("TV volume: " + volume);
+    }
+}
+```
+
+Radio.java
+
+java
+```
+class Radio implements Device {
+
+    @Override
+    public void turnOn() {
+        System.out.println("Radio is ON");
+    }
+
+    @Override
+    public void turnOff() {
+        System.out.println("Radio is OFF");
+    }
+
+    @Override
+    public void setVolume(int volume) {
+        System.out.println("Radio volume: " + volume);
+    }
+}
+```
+
+### Step 3: Create the Remote abstraction
+
+The remote holds a reference to a `Device`. This reference is the bridge between the remote and the device.
+
+java
+```
+abstract class Remote {
+
+    protected Device device;
+
+    public Remote(Device device) {
+        this.device = device;
+    }
+
+    public void powerOn() {
+        device.turnOn();
+    }
+
+    public void powerOff() {
+        device.turnOff();
+    }
+
+    public void setVolume(int volume) {
+        device.setVolume(volume);
+    }
+}
+```
+
+### Step 4: Create different remote types
+
+BasicRemote.java
+
+java
+```
+class BasicRemote extends Remote {
+
+    public BasicRemote(Device device) {
+        super(device);
+    }
+}
+```
+
+AdvancedRemote.java
+
+java
+```
+class AdvancedRemote extends Remote {
+
+    public AdvancedRemote(Device device) {
+        super(device);
+    }
+
+    public void mute() {
+        device.setVolume(0);
+        System.out.println("Device muted");
+    }
+}
+```
+
+The advanced remote adds a new feature without changing either the `Device` interface or the TV and Radio implementations.
+
+### Step 5: Use the Bridge
+
+java
+```
+public class Main {
+
+    public static void main(String[] args) {
+
+        Device tv = new TV();
+        Device radio = new Radio();
+
+        Remote basicTVRemote = new BasicRemote(tv);
+        Remote basicRadioRemote = new BasicRemote(radio);
+
+        AdvancedRemote advancedTVRemote =
+            new AdvancedRemote(tv);
+
+        basicTVRemote.powerOn();
+        basicTVRemote.setVolume(20);
+
+        basicRadioRemote.powerOn();
+
+        advancedTVRemote.powerOn();
+        advancedTVRemote.mute();
+    }
+}
+```
+
+Output:
+
+text
+```
+TV is ON
+TV volume: 20
+Radio is ON
+TV is ON
+TV volume: 0
+Device muted
+```
+
+## 3. Kotlin Implementation
+
+kotlin
+```
+// Implementation interface
+interface Device {
+    fun turnOn()
+    fun turnOff()
+    fun setVolume(volume: Int)
+}
+
+// Concrete implementation
+class TV : Device {
+    override fun turnOn() {
+        println("TV is ON")
+    }
+
+    override fun turnOff() {
+        println("TV is OFF")
+    }
+
+    override fun setVolume(volume: Int) {
+        println("TV volume: $volume")
+    }
+}
+
+class Radio : Device {
+    override fun turnOn() {
+        println("Radio is ON")
+    }
+
+    override fun turnOff() {
+        println("Radio is OFF")
+    }
+
+    override fun setVolume(volume: Int) {
+        println("Radio volume: $volume")
+    }
+}
+
+// Abstraction
+abstract class Remote(
+    protected val device: Device
+) {
+    fun powerOn() = device.turnOn()
+
+    fun powerOff() = device.turnOff()
+
+    fun setVolume(volume: Int) =
+        device.setVolume(volume)
+}
+
+// Refined abstractions
+class BasicRemote(device: Device) : Remote(device)
+
+class AdvancedRemote(device: Device) : Remote(device) {
+    fun mute() {
+        device.setVolume(0)
+        println("Device muted")
+    }
+}
+
+fun main() {
+    val tv = TV()
+    val radio = Radio()
+
+    val basicTVRemote = BasicRemote(tv)
+    val basicRadioRemote = BasicRemote(radio)
+    val advancedTVRemote = AdvancedRemote(tv)
+
+    basicTVRemote.powerOn()
+    basicTVRemote.setVolume(20)
+
+    basicRadioRemote.powerOn()
+
+    advancedTVRemote.powerOn()
+    advancedTVRemote.mute()
+}
+```
+
+## 4. How Bridge works
+
+Remote (Abstraction)
+
+Defines power and volume operations
+
+Device (Interface)
+
+The bridge: `Remote` holds a `Device` reference
+
+TV
+
+Radio
+
+BasicRemote and AdvancedRemote can each work with either device.
+
+There are two independent hierarchies:
+
+- Remote hierarchy: `Remote`, `BasicRemote`, `AdvancedRemote`
+- Device hierarchy: `Device`, `TV`, `Radio`
+
+You can add a `SmartRemote` or a `Speaker` without changing the other hierarchy.
+
+## 5. Why is this Bridge and not Adapter?
+
+The goal is not to make incompatible interfaces compatible. We designed the `Remote` abstraction and `Device` interface to work together from the beginning.
+
+- Bridge: Remote type and device type can vary independently.
+- Adapter: Makes an existing incompatible device interface work with the interface expected by the remote.
+
+## Interview memory trick
+
+Remote = Abstraction. Device = Implementation. The remote holds a device reference, connecting both hierarchies through composition.
