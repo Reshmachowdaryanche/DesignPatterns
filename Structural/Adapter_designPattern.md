@@ -25,7 +25,7 @@ Imagine you are traveling to another country. Your laptop charger has a plug tha
 
 Instead of changing the charger or the socket, you use a power adapter that allows the two incompatible interfaces to work together.
 
-
+![Adapter Design Pattern](Structural/adapter.png)
 
 The same idea applies in software.
 
