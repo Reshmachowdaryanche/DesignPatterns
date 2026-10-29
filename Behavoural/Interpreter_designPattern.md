@@ -1,95 +1,135 @@
 # Interpreter Design Pattern — Java & Kotlin
 
-Let's learn the Interpreter Pattern step by step, using a simple example so you can understand what it does, who the client is, and how the Java and Kotlin code works.
+An interview-focused guide to the Interpreter Pattern, using a calculator example with expression evaluation, Java and Kotlin implementations, class relationships, comparisons, and common interview questions.
 
-## 1. What is the Interpreter Pattern?
+## Table of Contents
 
-The Interpreter Pattern is a behavioral design pattern used to define and evaluate a simple language or set of expressions.
+1. What Is the Interpreter Pattern?
+2. Why Do We Need It?
+3. Java Implementation
+4. Kotlin Implementation
+5. How the Interpreter Pattern Works
+6. Types and Common Use Cases
+7. When to Use the Interpreter Pattern
+8. Interpreter vs. Other Patterns
+9. Common Interview Questions
+10. Quick Revision
 
-In simple words, you define rules for a language, and your code interprets those rules to produce a result.
+# 1. What Is the Interpreter Pattern?
+
+The Interpreter Pattern is a behavioral design pattern that defines a representation for a language's grammar and provides a way to evaluate expressions in that language.
+
+In simple words, the Interpreter Pattern allows us to represent rules or expressions as objects and evaluate them to produce a result.
+
+### Real-world example: Calculator
 
 Imagine you are building a calculator that understands expressions such as:
 
 - `5 + 3`
 - `10 - 4`
-- `2 + 6`
+- `(5 + 3) - 2`
 
-You want your program to understand what these expressions mean and calculate the result.
+The calculator needs to understand these expressions and calculate their results.
 
 For example:
 
-Expression
+text
 
-# 5 + 3
+```
+Expression: 5 + 3
 
-Interpreter
+Interpreter evaluates the expression.
 
-Understands the expression's meaning
+Result: 8
+```
 
-Result
+In the Interpreter Pattern, we represent the expression using objects.
 
-# 8
+For example, `5 + 3` can be represented using:
 
-The Interpreter Pattern represents the parts of an expression as objects, with each object knowing how to evaluate itself.
+- A `NumberExpression` representing `5`.
+- A `NumberExpression` representing `3`.
+- An `AddExpression` combining the two numbers.
 
-Memory trick: Interpreter Pattern = Represent the rules of a language as objects and use them to evaluate expressions.
+The addition expression evaluates its children and returns their sum.
 
-## 2. Understand it with a real example
+Memory trick: Interpreter Pattern = Represent language rules as objects and evaluate those objects to get a result.
 
-Suppose you want to build a calculator.
+# 2. Why Do We Need It?
 
-There are three important things:
+Suppose you implement a calculator using `if-else` statements.
 
-- The expression — what you want to calculate, such as `5 + 3`.
-- The interpreter — the code that understands and evaluates the expression.
-- The result — `8`.
+java
 
-In the Interpreter Pattern, we can represent the expression `5 + 3` as a tree:
+```
+class Calculator {
 
-# +
+    public int calculate(String operator, int a, int b) {
 
-Addition expression
+        if (operator.equals("+")) {
+            return a + b;
 
-## 5
+        } else if (operator.equals("-")) {
+            return a - b;
 
-Left operand
+        } else if (operator.equals("*")) {
+            return a * b;
+        }
 
-## 3
+        throw new IllegalArgumentException(
+            "Unknown operator"
+        );
+    }
+}
+```
 
-Right operand
+This works for simple calculations, but as the application grows, you may need to support:
 
-The addition expression contains two smaller expressions: `5` and `3`.
+- Complex mathematical expressions.
+- Boolean expressions.
+- Business rules.
+- Search filters.
+- Custom configuration languages.
+- Nested expressions using parentheses.
 
-When evaluated, it asks each child expression for its value and adds the results.
+As the rules become more complex, the central conditional logic can become difficult to maintain.
 
-This is called an expression tree.
+## With the Interpreter Pattern
 
-The same idea can represent more complex expressions, such as:
+Instead of putting every rule inside one calculator class, we create separate expression classes.
 
-$$
-(5+3)-2=6
-$$
+For example:
 
-The subtraction expression contains an addition expression and a number expression.
+text
 
-## 3. Who are the components?
+```
+             AddExpression
+              /         \
+             /           \
+   NumberExpression   NumberExpression
+          (5)                (3)
+```
 
-| Component | Meaning | Example |
-| --- | --- | --- |
-| Abstract Expression | Defines a common evaluation method | `Expression` |
-| Terminal Expression | Represents a basic value | `NumberExpression(5)` |
-| Non-terminal Expression | Combines other expressions | `AddExpression` |
-| Client | Builds the expression structure and asks for the result | `main()` |
+Each expression knows how to evaluate itself.
 
-There is no separate invoker like the one in the Command Pattern. Here, the expression objects themselves evaluate the expression.
+The flow is:
 
-# 4. Java Implementation
+1. The client creates expression objects.
+2. The client combines them into an expression tree.
+3. The client calls `interpret()` on the root expression.
+4. The root evaluates its child expressions.
+5. Each child returns its result.
+6. The root combines the results and returns the final answer.
 
-Let's build a small calculator using the Interpreter Pattern.
+Important: The Interpreter Pattern represents and evaluates expressions. Converting raw input text such as `"5 + 3"` into an expression tree requires a parser, which is a separate responsibility unless you implement it as part of the system.
+
+# 3. Java Implementation
+
+Let's build a calculator using the Interpreter Pattern.
 
 ## Step 1: Create the Expression interface
 
-Every expression must provide an `interpret()` method.
+The interface defines a common method for evaluating expressions.
 
 java
 
@@ -99,13 +139,17 @@ interface Expression {
 }
 ```
 
-This is the common contract.
+### What does `Expression` do?
 
-Any expression, whether it represents a number or an addition operation, must implement `interpret()`.
+- Defines the common evaluation contract.
+- Allows different expression types to be used interchangeably.
+- Enables complex expressions to contain other expressions.
 
-## Step 2: Create a NumberExpression
+Every expression class must implement the `interpret()` method.
 
-A number is the simplest expression. It just returns its value.
+## Step 2: Create NumberExpression
+
+A number is the simplest expression. It returns its value without performing any calculation.
 
 java
 
@@ -125,7 +169,7 @@ class NumberExpression implements Expression {
 }
 ```
 
-For example:
+Example:
 
 java
 
@@ -143,11 +187,11 @@ text
 5
 ```
 
-There is no calculation to perform here. The expression simply returns `5`.
+`NumberExpression` is called a Terminal Expression because it represents a basic value and does not contain other expressions.
 
-## Step 3: Create an AddExpression
+## Step 3: Create AddExpression
 
-An addition expression contains two expressions.
+An addition expression contains two child expressions and adds their results.
 
 java
 
@@ -171,7 +215,9 @@ class AddExpression implements Expression {
 }
 ```
 
-Let's understand the important line:
+### How does it work?
+
+Consider:
 
 java
 
@@ -179,18 +225,20 @@ java
 return left.interpret() + right.interpret();
 ```
 
-The addition expression:
+The expression:
 
-1. Evaluates the left expression.
-2. Evaluates the right expression.
+1. Evaluates the left child.
+2. Evaluates the right child.
 3. Adds both results.
 4. Returns the final result.
 
 Notice that `left` and `right` are of type `Expression`, not `NumberExpression`.
 
-That means they can represent numbers, additions, subtractions, or other expression types that implement the interface.
+This allows them to contain other operations as well as numbers.
 
-## Step 4: Create a SubtractExpression
+## Step 4: Create SubtractExpression
+
+We can implement subtraction in the same way.
 
 java
 
@@ -214,11 +262,11 @@ class SubtractExpression implements Expression {
 }
 ```
 
-This follows the same structure but performs subtraction instead of addition.
+This class evaluates both child expressions and subtracts the right result from the left result.
 
-## Step 5: Create the Client — main()
+## Step 5: Create the Client
 
-Now let's build the expression `5 + 3`.
+Now let's evaluate the expression `5 + 3`.
 
 java
 
@@ -227,7 +275,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        // Create basic expressions
+        // Create number expressions
         Expression five = new NumberExpression(5);
         Expression three = new NumberExpression(3);
 
@@ -235,7 +283,7 @@ public class Main {
         Expression addition =
             new AddExpression(five, three);
 
-        // Interpret the complete expression
+        // Evaluate the complete expression
         System.out.println(addition.interpret());
     }
 }
@@ -249,21 +297,25 @@ text
 8
 ```
 
-Who is the client? It is `Main`, specifically the `main()` method in this example.
+### Who is the client?
+
+The `Main` class, specifically its `main()` method, is the client in this example.
 
 The client creates the expression objects, connects them together, and calls `interpret()` on the root expression.
 
-The expression objects handle the actual evaluation.
+The expression objects perform the actual evaluation.
 
-## Step 6: Evaluate a more complex expression
+## Step 6: Evaluate a complex expression
 
-What if we want to calculate:
+Suppose we want to calculate:
 
-$$
-(5+3)-2
-$$
+text
 
-We can reuse our existing classes.
+```
+(5 + 3) - 2
+```
+
+We can reuse the expression classes we already created.
 
 java
 
@@ -295,75 +347,51 @@ text
 6
 ```
 
-The client does not calculate `5 + 3 - 2` itself. It builds the expression tree and asks the root expression to interpret it.
+### How does this work?
 
-# 5. How does the Java code actually work?
-
-Let's trace the expression `(5 + 3) - 2`.
-
-Step 1Client builds the expression tree
-
-`Main` creates the number expressions, the addition expression, and the subtraction expression.
-
-Step 2Client calls the root expression
-
-java
-
-```
-result.interpret();
-```
-
-The root is `SubtractExpression`.
-
-Step 3Subtraction evaluates its children
-
-java
-
-```
-left.interpret() - right.interpret()
-```
-
-The left child is the addition expression; the right child is the number `2`.
-
-Step 4Addition evaluates its own children
-
-`5 + 3 = 8`
-
-Step 5The final result is calculated
-
-`8 - 2 = 6`
-
-The most important concept is that each expression knows how to evaluate itself.
-
-- `NumberExpression` returns a number.
-- `AddExpression` evaluates two expressions and adds them.
-- `SubtractExpression` evaluates two expressions and subtracts them.
-
-## Class relationship
+The expression tree is:
 
 text
 
 ```
-              Expression
-                  |
-          +-------+--------+
-          |                |
-   NumberExpression    AddExpression
-                           |
-                     left, right
-                     Expressions
-
-              SubtractExpression
-                    |
-               left, right
-               Expressions
+          SubtractExpression
+             /          \
+            /            \
+    AddExpression    NumberExpression
+       /      \              (2)
+      /        \
+    (5)        (3)
 ```
 
-All these classes implement `Expression`. The non-terminal expressions also contain references to other expressions.
+The subtraction expression evaluates its left child first:
 
-# 6. Kotlin Implementation
+text
 
-Kotlin implements the same pattern using interfaces and classes.
+```
+5 + 3 = 8
+```
+
+Then it evaluates the right child:
+
+text
+
+```
+2
+```
+
+Finally:
+
+text
+
+```
+8 - 2 = 6
+```
+
+Interview note: The client builds the expression tree and asks the root expression to evaluate it. Each expression is responsible for its own evaluation logic.
+
+# 4. Kotlin Implementation
+
+Kotlin supports the Interpreter Pattern using interfaces and classes.
 
 ## Complete implementation
 
@@ -437,7 +465,7 @@ interface Expression {
 }
 ```
 
-This defines a common contract for every expression.
+This defines the common evaluation contract.
 
 Now consider:
 
@@ -447,75 +475,129 @@ kotlin
 left.interpret() + right.interpret()
 ```
 
-The addition expression doesn't need to know whether its children are numbers or other operations. It simply asks them to evaluate themselves.
+The addition expression doesn't need to know whether its children are numbers, additions, or other expressions. It simply asks them to evaluate themselves.
 
-This is called recursive evaluation: an expression evaluates its child expressions, which may evaluate their own children.
+Kotlin's concise syntax makes the implementation shorter, but the underlying design is the same as in Java.
 
-Kotlin's concise syntax makes this implementation shorter, but the underlying design is the same as Java.
+Kotlin can also use sealed classes and data classes to model expression trees, especially when the set of expression types is known in advance.
 
-# 7. Does Interpreter automatically understand a string?
+# 5. How the Interpreter Pattern Works
 
-This is an important interview point.
+The pattern has three main structural roles.
 
-Suppose the user enters:
+| Role | Responsibility | Example |
+| --- | --- | --- |
+| Abstract Expression | Defines the common evaluation contract | `Expression` |
+| Terminal Expression | Represents a basic value or symbol | `NumberExpression` |
+| Non-terminal Expression | Combines other expressions according to a rule | `AddExpression`, `SubtractExpression` |
+| Client | Builds the expression structure and requests evaluation | `Main` |
+
+## Class diagram
 
 text
 
 ```
-5 + 3 - 2
+                   Client
+                     |
+                     v
+                 Expression
+                 (Interface)
+                     ^
+                     |
+          +----------+-----------+
+          |          |           |
+          v          v           v
+       Number      Add       Subtract
+     Expression  Expression  Expression
+                     |           |
+                     +-----+-----+
+                           |
+                  Child Expressions
 ```
 
-Our implementation does not automatically convert that text into an expression tree.
+More precisely:
 
-We manually created the tree using:
+- Every expression implements the `Expression` interface.
+- `NumberExpression` represents a terminal expression.
+- `AddExpression` and `SubtractExpression` contain references to other expressions.
+- The client invokes `interpret()` on the root expression.
 
-java
+## Execution flow
+
+For the expression `(5 + 3) - 2`:
+
+1. The client creates the number expressions.
+2. The client creates an addition expression using `5` and `3`.
+3. The client creates a subtraction expression using the addition expression and `2`.
+4. The client calls `result.interpret()`.
+5. The subtraction expression evaluates its child expressions.
+6. The final result is returned as `6`.
+
+## Does the Interpreter Pattern automatically understand a string?
+
+No. Our implementation does not automatically parse strings such as `"5 + 3 - 2"`.
+
+We manually created the expression tree using Java objects.
+
+A complete calculator would typically have two stages:
+
+text
 
 ```
-new SubtractExpression(
-    new AddExpression(
-        new NumberExpression(5),
-        new NumberExpression(3)
-    ),
-    new NumberExpression(2)
-);
+Input String
+     |
+     v
+   Parser
+     |
+     v
+Expression Tree
+     |
+     v
+  Interpreter
+     |
+     v
+    Result
 ```
 
-The Interpreter Pattern defines how expressions are represented and evaluated. Parsing the raw string into an expression tree is a separate step, unless you implement that functionality as part of your system.
+The parser converts text into an expression tree. The interpreter evaluates that tree.
 
-A complete calculator could have this architecture:
+For a large language, a parser generator or a dedicated parsing library may be more appropriate.
 
-Input string
+# 6. Types and Common Use Cases
 
-## `5 + 3 - 2`
-
-Parser
-
-Converts text into an expression tree
-
-Expression tree
-
-AddExpression, SubtractExpression, NumberExpression
-
-Interpreter
-
-# 6
-
-For a full programming language or complicated mathematical expressions, a parser generator or a dedicated parsing technique may be more appropriate than creating every expression tree manually.
-
-# 8. Common types and use cases
-
-These are common ways the Interpreter Pattern is used, rather than a mandatory list of formal subtypes.
+The Interpreter Pattern is generally described by how expressions represent and evaluate a grammar, rather than by a fixed set of formal subtypes.
 
 ## 1. Mathematical expressions
 
-Evaluate expressions such as addition, subtraction, multiplication, and division.
+Represent and evaluate arithmetic operations.
 
-Example: A calculator or a small formula engine.
+Example:
 
-## 2. Business rules
+text
 
-Represent rules as expressions that can be combined.
+```
+(5 + 3) - 2
+```
+
+A calculator can represent each number and operation as an expression object.
+
+## 2. Boolean expressions
+
+Evaluate logical conditions.
+
+Example:
+
+text
+
+```
+TRUE AND FALSE
+```
+
+An `AndExpression` can evaluate two child expressions and combine their Boolean results.
+
+## 3. Business rules
+
+Represent business conditions as composable expressions.
 
 Example:
 
@@ -525,11 +607,11 @@ text
 CustomerAge > 18 AND HasValidMembership
 ```
 
-A rule engine could evaluate each condition and combine the results.
+A rule engine can evaluate each condition and combine the results.
 
-## 3. Search and filtering
+## 4. Search and filtering
 
-Interpret simple search conditions.
+Interpret simple search expressions.
 
 Example:
 
@@ -539,96 +621,96 @@ text
 price < 100 AND category = "Books"
 ```
 
-A filter engine can represent the conditions as expression objects and evaluate them against data.
+A filtering system can represent these conditions as an expression tree and evaluate them against data.
 
-## 4. Domain-specific languages (DSLs)
+## 5. Domain-specific languages (DSLs)
 
-A DSL is a small language designed for a specific purpose.
+A domain-specific language is a small language designed for a particular purpose.
 
 Examples include:
 
 - Pricing rules.
 - Configuration expressions.
-- Simple automation rules.
+- Automation rules.
 - Permission expressions.
 - Query conditions.
 
-## 5. Boolean expressions
+Note that not every rule engine or calculator necessarily uses the Interpreter Pattern. The pattern applies when the language rules are represented and evaluated through expression structures.
 
-Represent and evaluate conditions such as:
+# 7. When to Use the Interpreter Pattern
 
-text
-
-```
-TRUE AND FALSE
-```
-
-An `AndExpression` could evaluate its two child expressions and combine their results.
-
-## When should you use it?
-
-Use the Interpreter Pattern when:
+Use this pattern when:
 
 - You have a small, well-defined language or grammar.
 - Expressions need to be represented and evaluated repeatedly.
-- The rules can be modeled as composable objects.
-- You want to add new expression types without rewriting all existing expressions.
+- Rules can be modeled as composable objects.
+- You want to add new expression types without rewriting existing ones.
+- You need to evaluate business or logical rules dynamically.
 
-Avoid it when:
+### When should you avoid it?
+
+Avoid the Interpreter Pattern when:
 
 - The grammar is large or highly complex.
-- The language needs advanced parsing, optimization, or error recovery.
+- The language requires advanced parsing, optimization, or error recovery.
 - The expression tree would become difficult to maintain.
-- A standard expression engine or parser already solves the problem.
+- A mature parser or expression engine already solves the problem.
 
-Main benefit: Rules are represented as objects that can be composed and extended.
+Main benefit: Makes language rules explicit, composable, and easier to extend.
 
-Main limitation: A class for every grammar rule can create too many classes and become inefficient for complex languages.
+Main limitation: Creating a class for every grammar rule can lead to too many classes and make complex languages difficult to maintain.
 
-# 9. Interpreter vs. Other Design Patterns
+# 8. Interpreter vs. Other Patterns
 
-| Feature | Interpreter | Command | Strategy | Chain of Responsibility |
-| --- | --- | --- | --- | --- |
-| Main purpose | Evaluate expressions in a language | Encapsulate a request | Select an algorithm | Pass a request through handlers |
-| Main focus | Meaning of expressions | Executing an operation | Choosing behavior | Routing responsibility |
-| Key method | `interpret()` | `execute()` | Depends on the strategy | `handleRequest()` |
-| Example | Calculate `5 + 3` | Turn on a light | Choose a payment algorithm | Escalate a support ticket |
+| Feature | Interpreter | Command | Strategy | Chain of Responsibility | Composite |
+| --- | --- | --- | --- | --- | --- |
+| Main purpose | Evaluate expressions in a language | Encapsulate a request | Choose an algorithm | Pass a request through handlers | Represent part-whole hierarchies |
+| Main focus | Meaning of expressions | Executing an operation | Selecting behavior | Routing responsibility | Organizing objects into trees |
+| Typical method | `interpret()` | `execute()` | Depends on the strategy | `handleRequest()` | Depends on the component |
+| Example | Calculate `5 + 3` | Turn on a light | Choose a payment algorithm | Escalate a support ticket | Represent folders and files |
 
 ## Interpreter vs. Command
 
-- Interpreter: Evaluates an expression according to language rules.
-- Command: Encapsulates an operation so it can be executed by an invoker.
+- Interpreter evaluates an expression according to language rules.
+- Command encapsulates an operation so it can be executed by an invoker.
 
 Example: `AddExpression` evaluates `5 + 3`, while `LightOnCommand` represents the action of turning on a light.
 
 ## Interpreter vs. Strategy
 
-- Interpreter: Evaluates a language or expression.
-- Strategy: Selects one of several interchangeable algorithms.
+- Interpreter evaluates a language or expression.
+- Strategy selects one of several interchangeable algorithms.
 
 Example: An expression tree evaluates a mathematical formula, while a payment strategy chooses between card and bank transfer processing.
+
+## Interpreter vs. Chain of Responsibility
+
+- Interpreter evaluates an expression.
+- Chain of Responsibility forwards a request through handlers that decide whether to process it or pass it along.
+
+Example: An expression tree calculates a result, while a support ticket moves from Level 1 to Level 2 support.
 
 ## Interpreter vs. Composite
 
 Both patterns commonly use tree structures.
 
-- Interpreter: Each node represents a language expression and knows how to evaluate it.
-- Composite: Each node represents an object in a part-whole hierarchy and provides a uniform way to work with individual objects and groups.
+- Interpreter represents language expressions and defines how they are evaluated.
+- Composite represents individual objects and groups through a common interface.
 
-An expression tree can use the Composite structure, but Interpreter adds the language-specific evaluation behavior.
+An expression tree can use a Composite-like structure, but Interpreter adds the language-specific evaluation behavior.
 
-# 10. Common Interview Questions
+# 9. Common Interview Questions
 
 ### Q1. What is the Interpreter Pattern?
 
-It is a behavioral design pattern that represents the grammar of a simple language and provides a way to evaluate expressions in that language.
+It is a behavioral design pattern that represents the grammar of a language and provides a way to evaluate expressions in that language.
 
 ### Q2. What are the main components?
 
-- Abstract Expression: Defines the interpretation contract.
+- Abstract Expression: Defines the evaluation contract.
 - Terminal Expression: Represents a basic value or symbol.
 - Non-terminal Expression: Combines other expressions according to a rule.
-- Client: Creates the expression structure and requests evaluation.
+- Client: Builds the expression structure and requests evaluation.
 
 ### Q3. What is a terminal expression?
 
@@ -642,15 +724,17 @@ A non-terminal expression combines one or more expressions.
 
 In our example, `AddExpression` contains left and right expressions and adds their results.
 
-### Q5. Is Interpreter a behavioral pattern?
+### Q5. Is the Interpreter Pattern behavioral or structural?
 
-Yes. It focuses on how language expressions are represented and evaluated.
+It is a behavioral design pattern because it focuses on evaluating expressions according to language rules.
 
 ### Q6. What is an expression tree?
 
-It is a tree structure in which nodes represent values or operations. For example, `(5 + 3) - 2` can be represented using subtraction at the root, addition as its left child, and number expressions as leaves.
+An expression tree represents the structure of an expression using nodes for values and operations.
 
-### Q7. Does the Interpreter Pattern parse a string automatically?
+For example, `(5 + 3) - 2` has a subtraction node at the root, an addition node as its left child, and number expressions as leaves.
+
+### Q7. Does the Interpreter Pattern parse strings automatically?
 
 No. Parsing raw text into an expression tree is a separate responsibility unless you implement a parser as part of the application.
 
@@ -660,14 +744,14 @@ No. Parsing raw text into an expression tree is a separate responsibility unless
 - Supports composable expressions.
 - Allows new expression types to be added.
 - Makes small rule engines easier to extend.
-- Can make individual expression classes easy to test.
+- Makes individual expression classes easier to test.
 
 ### Q9. What are the disadvantages?
 
 - Can create many classes.
 - Complex grammars become difficult to maintain.
 - Recursive evaluation can have performance costs.
-- Parsing and syntax validation may require additional implementation.
+- Parsing and syntax validation require additional implementation.
 
 ### Q10. Where is the Interpreter Pattern used?
 
@@ -675,11 +759,11 @@ It can be used in simple calculators, rule engines, filtering systems, Boolean e
 
 ### Q11. Can Interpreter be implemented in Kotlin?
 
-Yes. Kotlin supports interfaces, sealed classes, data classes, and recursive functions, all of which can be used to represent and evaluate expressions.
+Yes. Kotlin supports interfaces, sealed classes, data classes, and recursive functions, which can all be used to represent and evaluate expressions.
 
 ### Q12. Can Interpreter use the Composite Pattern?
 
-Yes. Expression trees often have a composite-like structure: individual values form the leaves, and operations contain other expressions. Interpreter adds the rules for evaluating those nodes.
+Yes. Expression trees often have a Composite-like structure in which individual values form the leaves and operations contain other expressions. Interpreter adds the rules for evaluating those nodes.
 
 ### Q13. What is the difference between an interpreter and a compiler?
 
@@ -689,7 +773,7 @@ An interpreter evaluates or executes expressions according to their meaning. A c
 
 Avoid building your own interpreter for a complex language when a mature parser or expression engine would be more suitable.
 
-# 11. Quick Revision
+# 10. Quick Revision
 
 - Category: Behavioral design pattern.
 - Purpose: Represent and evaluate expressions in a language.
@@ -704,12 +788,6 @@ Avoid building your own interpreter for a complex language when a mature parser 
 - Main benefit: Makes simple language rules composable and extensible.
 - Main limitation: Can become complicated when the grammar grows.
 
-## One-line memory trick
+## One-Line Memory Trick
 
 Interpreter Pattern = Represent the rules of a language as objects, then evaluate those objects to get a result.
-
-The easiest way to remember it is to compare these three examples:
-
-- Command: Execute an instruction — `LightOnCommand`.
-- Interpreter: Evaluate an expression — `5 + 3`.
-- Chain of Responsibility: Forward a request — Level 1 to Level 2 support.
